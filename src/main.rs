@@ -10,6 +10,9 @@ use std::path::Path;
 use std::sync::Mutex;
 
 const DATABASE_FILE: &str = "db.txt";
+const MAXIMUM_PASSWORD_LENGTH: usize = 32;
+const MAXIMUM_USERNAME_LENGTH: usize = 128;
+const MINIMUM_USERNAME_LENGTH: usize = 1;
 
 lazy_static! {
     static ref GRADE_DATABASE: Mutex<HashMap<String, Vec<f32>>> = {
@@ -85,22 +88,22 @@ fn show_grades(message: &str) {
 }
 
 fn become_teacher(teacher: &mut bool) {
-    let username: String = input::<String>().msg("Enter your username: ").get();
-    let password: String = input().msg("Enter your password: ").get();
-    if PROF_CREDENTIALS.contains(&(username.clone(), password.clone())) {
-        *teacher = true;
-    } else {
-        *teacher = false;
-        error!(
-            "Failed teacher login with username {} and password {}",
-            username, password
-        );
+    match login() {
+        Ok(result) => {
+            if result {
+                *teacher = true;
+            } else {
+                *teacher = false;
+                println!("Wrong credentials");
+            }
+        }
+        Err(_) => println!("Failed login"),
     }
 }
 
 fn enter_grade() {
     println!("What is the name of the student?");
-    let name: String = input().get();
+    let name: String = input().add_test(|x: &String| !x.is_empty()).get();
     println!("What is the new grade of the student?");
     let grade: f32 = input().add_test(|x| *x >= 0.0 && *x <= 6.0).get();
     let mut map = GRADE_DATABASE.lock().unwrap();
@@ -120,6 +123,40 @@ fn quit() {
     std::process::exit(0);
 }
 
+fn login() -> std::io::Result<bool> {
+    let username = match get_name("Enter your username: ") {
+        Ok(username) => username,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+    let password = match get_password("Enter your password: ") {
+        Ok(password) => password,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    if PROF_CREDENTIALS.contains(&(username.clone(), password.clone())) {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+fn get_name(message: &str) -> std::io::Result<String> {
+    return input()
+        .msg(message)
+        .add_test(|x : &String| x.len() <= MAXIMUM_USERNAME_LENGTH)
+        .try_get();
+}
+
+fn get_password(message: &str) -> std::io::Result<String> {
+    return input()
+        .msg(message)
+        .add_test(|x: &String| x.len() <= MAXIMUM_PASSWORD_LENGTH)
+        .try_get();
+}
 fn main() {
     TermLogger::init(
         LevelFilter::Trace,
