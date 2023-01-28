@@ -3,10 +3,10 @@ use lazy_static::{__Deref, lazy_static};
 use chrono::Local;
 use read_input::prelude::*;
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger, CombinedLogger};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::error::Error;
 use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter, stdin, stdout, Write};
+use std::io::{BufReader, BufWriter};
 use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
@@ -18,7 +18,6 @@ use sanitizer::StringSanitizer;
 const DATABASE_FILE: &str = "db.txt";
 const MAXIMUM_PASSWORD_LENGTH: usize = 32;
 const MAXIMUM_USERNAME_LENGTH: usize = 128;
-const MINIMUM_USERNAME_LENGTH: usize = 1;
 
 // Session data
 struct Session {
@@ -119,7 +118,10 @@ fn teacher_action(session: &mut Option<Session>) {
     let choice = input().inside(0..=3).msg("Enter Your choice: ").get();
     match choice {
         1 => show_grades(session, "Enter the name of the user of which you want to see the grades:"),
-        2 => enter_grade(session),
+        2 => match enter_grade(session) {
+            Ok(_) => println!("Grade entered"),
+            Err(_) => println!("Grade could not be entered"),
+        }
         3 => logout(session),
         0 => quit(),
         _ => println!("impossible choice"),
@@ -152,7 +154,7 @@ fn show_grades(session: &mut Option<Session>, message: &str) {
 }
 
 fn show_grades_of_student(session: &mut Option<Session>, student: &str) -> Result<(),()> {
-    let mut teacher_name;
+    let teacher_name;
     match session {
         Some(session) => {
             if session.is_teacher == false && session.username != student {
@@ -184,7 +186,7 @@ fn show_grades_of_student(session: &mut Option<Session>, student: &str) -> Resul
 }
 
 fn enter_grade(session: &mut Option<Session>) -> Result<(),()> {
-    let mut teacher_name;
+    let teacher_name;
     match session {
         Some(session) => {
             if session.is_teacher == false {
@@ -326,7 +328,7 @@ fn verify_password(password: &str, hash: &str) -> bool {
     let parsed_hash = PasswordHash::new(&hash).unwrap();
     match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => true,
-        Err(e) => false
+        Err(_) => false
     }
 }
 
