@@ -22,8 +22,8 @@ lazy_static! {
     };
     static ref PROF_CREDENTIALS: HashSet<(String, String)> = {
         let mut set = HashSet::new();
-        set.insert(("Danono".to_string(), "3lves4ndH0b1ts".to_string()));
-        set.insert(("Duc".to_string(), "l4crypt0C3stR1g0l0".to_string()));
+        set.insert(("danono".to_string(), "3lves4ndH0b1ts".to_string()));
+        set.insert(("duc".to_string(), "l4crypt0C3stR1g0l0".to_string()));
         set
     };
 }
@@ -168,12 +168,14 @@ fn login() -> std::io::Result<bool> {
 
 fn sanitize_name(name: String) -> String {
     let mut sanitize = StringSanitizer::from(name);
-    sanitize.trim().alphanumeric().to_lowercase().clamp_max(MAXIMUM_USERNAME_LENGTH).get()
+    sanitize.trim().alphanumeric().to_lowercase().clamp_max(MAXIMUM_USERNAME_LENGTH);
+    sanitize.get()
 }
 
 fn sanitize_password(password: String) -> String {
     let mut sanitize = StringSanitizer::from(password);
-    sanitize.trim().clamp_max(MAXIMUM_PASSWORD_LENGTH).get()
+    sanitize.trim().clamp_max(MAXIMUM_PASSWORD_LENGTH);
+    sanitize.get()
 }
 
 fn get_name(message: &str) -> std::io::Result<String> {
