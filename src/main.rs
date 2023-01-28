@@ -1,10 +1,11 @@
 use lazy_static::{__Deref, lazy_static};
-use log::error;
+#[macro_use] extern crate log;
+use chrono::Local;
 use read_input::prelude::*;
-use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger, CombinedLogger};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, stdin, stdout, Write};
 use std::ops::DerefMut;
 use std::path::Path;
@@ -107,7 +108,7 @@ fn teacher_action(session: &mut Option<Session>) {
     let choice = input().inside(0..=3).msg("Enter Your choice: ").get();
     match choice {
         1 => show_grades(session, "Enter the name of the user of which you want to see the grades:"),
-        2 => enter_grade(),
+        2 => enter_grade(session),
         3 => logout(session),
         0 => quit(),
         _ => panic!("impossible choice"),
@@ -135,18 +136,26 @@ fn show_grades(session: &mut Option<Session>, message: &str) {
 
 fn show_grades_of_student(session: &mut Option<Session>, student: &str) {
     // panic if the user is not a teacher
+    let mut teacher_name;
     match session {
         Some(session) => {
             if session.is_teacher == false && session.username != student {
-                panic!("You are not a teacher");
+                panic!("You don't have the right to see the grades of this student");
             }
+            teacher_name = session.username.clone();
         }
-        None => panic!("You are not logged in"),
+        None => panic!("You don't have the right to see the grades of this student"),
     }
     println!("Here are the grades of student {}", student);
+    info!("{} : {} accessed the grades of {}",
+        Local::now().format("%Y-%m-%dT%H:%M:%S"), teacher_name, student);
     let db = GRADE_DATABASE.lock().unwrap();
     match db.get(student) {
         Some(grades) => {
+            if grades.is_empty() {
+                println!("No grades yet");
+                return;
+            }
             println!("{:?}", grades);
             println!(
                 "The average is {}",
@@ -157,7 +166,17 @@ fn show_grades_of_student(session: &mut Option<Session>, student: &str) {
     };
 }
 
-fn enter_grade() {
+fn enter_grade(session: &mut Option<Session>) {
+    let mut teacher_name;
+    match session {
+        Some(session) => {
+            if session.is_teacher == false {
+                panic!("You don't have the right to enter grades");
+            }
+            teacher_name = session.username.clone();
+        }
+        None => panic!("You don't have the right to enter grades"),
+    }
     println!("What is the name of the student?");
     let name: String = input()
         .add_test(|x: &String| !x.is_empty() && x.len() <= MAXIMUM_USERNAME_LENGTH).get();
@@ -176,6 +195,8 @@ fn enter_grade() {
         }
         Err(_) => panic!("Invalid grade"),
     };
+    info!("{} : {} entered the grade {} for {}",
+        Local::now().format("%Y-%m-%dT%H:%M:%S"), teacher_name, grade, name);
     let mut map = GRADE_DATABASE.lock().unwrap();
     match map.get_mut(&name) {
         Some(v) => v.push(grade),
@@ -184,7 +205,6 @@ fn enter_grade() {
         }
     };
 }
-
 
 fn quit() {
     println!("Saving database!");
@@ -262,13 +282,25 @@ fn get_password(message: &str) -> std::io::Result<String> {
     };
 }
 fn main() {
-    TermLogger::init(
-        LevelFilter::Trace,
-        Config::default(),
-        TerminalMode::Stderr,
-        ColorChoice::Auto,
-    )
-    .unwrap();
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            TerminalMode::Stderr,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            OpenOptions::new()
+                .create(true) // to allow creating the file, if it doesn't exist
+                .append(true) // to not truncate the file, but instead add to it
+                .open("info.log")
+                .unwrap(),
+        ),
+    ]).unwrap();
+
+    info!("{} : Program started", Local::now().format("%Y-%m-%dT%H:%M:%S"));
     welcome();
     loop {
         menu();
