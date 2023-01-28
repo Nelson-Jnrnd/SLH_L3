@@ -110,7 +110,7 @@ fn student_action(session: &mut Option<Session>) {
         1 => show_grades(session , "Here is your grades:"),
         2 => logout(session),
         0 => quit(),
-        _ => panic!("impossible choice"),
+        _ => println!("impossible choice"),
     }
 }
 
@@ -122,7 +122,7 @@ fn teacher_action(session: &mut Option<Session>) {
         2 => enter_grade(session),
         3 => logout(session),
         0 => quit(),
-        _ => panic!("impossible choice"),
+        _ => println!("impossible choice"),
     }
 }
 
@@ -132,10 +132,16 @@ fn show_grades(session: &mut Option<Session>, message: &str) {
         Some(s) => {
             if s.is_teacher {
                 let name: String = input().get();
-                show_grades_of_student(session, &name);
+                match show_grades_of_student(session, &name) {
+                    Ok(_) => (),
+                    Err(_) => println!("You are not allowed to see the grades of this student"),
+                }
             } else {
                 let name = &s.username.clone();
-                show_grades_of_student(session, name.as_str());
+                match show_grades_of_student(session, name.as_str()) {
+                    Ok(_) => (),
+                    Err(_) => println!("You are not allowed to see your grades"),
+                }
             }
         }
         None => {
@@ -145,17 +151,16 @@ fn show_grades(session: &mut Option<Session>, message: &str) {
     }
 }
 
-fn show_grades_of_student(session: &mut Option<Session>, student: &str) {
-    // panic if the user is not a teacher
+fn show_grades_of_student(session: &mut Option<Session>, student: &str) -> Result<(),()> {
     let mut teacher_name;
     match session {
         Some(session) => {
             if session.is_teacher == false && session.username != student {
-                panic!("You don't have the right to see the grades of this student");
+                return Err(());
             }
             teacher_name = session.username.clone();
         }
-        None => panic!("You don't have the right to see the grades of this student"),
+        None => return Err(()),
     }
     println!("Here are the grades of student {}", student);
     info!("{} : {} accessed the grades of {}",
@@ -165,28 +170,29 @@ fn show_grades_of_student(session: &mut Option<Session>, student: &str) {
         Some(grades) => {
             if grades.is_empty() {
                 println!("No grades yet");
-                return;
+            } else {
+                println!("{:?}", grades);
+                println!(
+                    "The average is {}",
+                    (grades.iter().sum::<f32>()) / ((*grades).len() as f32)
+                );
             }
-            println!("{:?}", grades);
-            println!(
-                "The average is {}",
-                (grades.iter().sum::<f32>()) / ((*grades).len() as f32)
-            );
+            Ok(())
         }
-        None => panic!("User not in system"),
-    };
+        None => Err(()),
+    }
 }
 
-fn enter_grade(session: &mut Option<Session>) {
+fn enter_grade(session: &mut Option<Session>) -> Result<(),()> {
     let mut teacher_name;
     match session {
         Some(session) => {
             if session.is_teacher == false {
-                panic!("You don't have the right to enter grades");
+                return Err(());
             }
             teacher_name = session.username.clone();
         }
-        None => panic!("You don't have the right to enter grades"),
+        None => return Err(()),
     }
     println!("What is the name of the student?");
     let name: String = input()
@@ -204,7 +210,10 @@ fn enter_grade(session: &mut Option<Session>) {
             let grade: f32 = grade.parse().unwrap();
             grade
         }
-        Err(_) => panic!("Invalid grade"),
+        Err(_) => {
+            println!("Invalid grade");
+            return Err(());
+        },
     };
     info!("{} : {} entered the grade {} for {}",
         Local::now().format("%Y-%m-%dT%H:%M:%S"), teacher_name, grade, name);
@@ -215,6 +224,7 @@ fn enter_grade(session: &mut Option<Session>) {
             map.insert(name, vec![grade]);
         }
     };
+    Ok(())
 }
 
 fn quit() {
@@ -316,10 +326,7 @@ fn verify_password(password: &str, hash: &str) -> bool {
     let parsed_hash = PasswordHash::new(&hash).unwrap();
     match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => true,
-        Err(e) => {
-            error!("{}", e);
-            false
-        }
+        Err(e) => false
     }
 }
 
