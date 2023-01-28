@@ -95,7 +95,7 @@ fn student_action(session: &mut Option<Session>) {
     println!("*****\n1: See your grades\n2: Logout\n0: Quit");
     let choice = input().inside(0..=2).msg("Enter Your choice: ").get();
     match choice {
-        1 => show_grades("Enter your name. Do NOT lie!"),
+        1 => show_grades(session , "Here is your grades:"),
         2 => logout(session),
         0 => quit(),
         _ => panic!("impossible choice"),
@@ -106,7 +106,7 @@ fn teacher_action(session: &mut Option<Session>) {
     println!("*****\n1: See grades of student\n2: Enter grades\n3 Logout\n0: Quit");
     let choice = input().inside(0..=3).msg("Enter Your choice: ").get();
     match choice {
-        1 => show_grades("Enter the name of the user of which you want to see the grades:"),
+        1 => show_grades(session, "Enter the name of the user of which you want to see the grades:"),
         2 => enter_grade(),
         3 => logout(session),
         0 => quit(),
@@ -114,12 +114,38 @@ fn teacher_action(session: &mut Option<Session>) {
     }
 }
 
-fn show_grades(message: &str) {
+fn show_grades(session: &mut Option<Session>, message: &str) {
     println!("{}", message);
-    let name: String = input().get();
-    println!("Here are the grades of user {}", name);
+    match session {
+        Some(s) => {
+            if s.is_teacher {
+                let name: String = input().get();
+                show_grades_of_student(session, &name);
+            } else {
+                let name = &s.username.clone();
+                show_grades_of_student(session, name.as_str());
+            }
+        }
+        None => {
+            println!("You are not logged in");
+            return;
+        }
+    }
+}
+
+fn show_grades_of_student(session: &mut Option<Session>, student: &str) {
+    // panic if the user is not a teacher
+    match session {
+        Some(session) => {
+            if session.is_teacher == false && session.username != student {
+                panic!("You are not a teacher");
+            }
+        }
+        None => panic!("You are not logged in"),
+    }
+    println!("Here are the grades of student {}", student);
     let db = GRADE_DATABASE.lock().unwrap();
-    match db.get(&name) {
+    match db.get(student) {
         Some(grades) => {
             println!("{:?}", grades);
             println!(
