@@ -10,6 +10,9 @@ use std::io::{BufReader, BufWriter, stdin, stdout, Write};
 use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::password_hash::rand_core::OsRng;
+use argon2::password_hash::SaltString;
 use sanitizer::StringSanitizer;
 
 const DATABASE_FILE: &str = "db.txt";
@@ -33,16 +36,24 @@ lazy_static! {
         let map = read_database_from_file(DATABASE_FILE).unwrap_or(HashMap::new());
         Mutex::new(map)
     };
-    static ref PROF_CREDENTIALS: HashSet<(String, String)> = {
-        let mut set = HashSet::new();
-        set.insert(("danono".to_string(), "3lves4ndH0b1ts".to_string()));
-        set.insert(("duc".to_string(), "l4crypt0C3stR1g0l0".to_string()));
+    static ref PROF_CREDENTIALS: HashMap<String, String> = {
+        let mut set = HashMap::new();
+        set.insert("danono".to_string(), hash_password(
+            sanitize_password("3lves4ndH0b1ts".to_string()).as_str()
+        ));
+        set.insert("duc".to_string(), hash_password(
+            sanitize_password("3lves4ndH0b1ts".to_string()).as_str()
+        ));
         set
     };
-    static ref STUDENT_CREDENTIALS: HashSet<(String, String)> = {
-        let mut set = HashSet::new();
-        set.insert(("daniel".to_string(), "3lves4ndH0b1ts".to_string()));
-        set.insert(("daniel2".to_string(), "3lves4ndH0b1ts".to_string()));
+    static ref STUDENT_CREDENTIALS: HashMap<String, String> = {
+        let mut set = HashMap::new();
+        set.insert("daniel".to_string(), hash_password(
+            sanitize_password("3lves4ndH0b1ts".to_string()).as_str()
+        ));
+        set.insert("daniel2".to_string(), hash_password(
+            sanitize_password("3lves4ndH0b1ts".to_string()).as_str()
+        ));
         set
     };
     static ref SESSION: Mutex<Option<Session>> = Mutex::new(None);
@@ -230,16 +241,25 @@ fn login(session: &mut Option<Session>) -> std::io::Result<bool> {
             return Err(e);
         }
     };
-
-    if PROF_CREDENTIALS.contains(&(username.clone(), password.clone())) {
-        session.replace(Session::new(username, true));
-        Ok(true)
-    } else if STUDENT_CREDENTIALS.contains(&(username.clone(), password.clone())) {
-        session.replace(Session::new(username, false));
-        Ok(true)
-    } else {
-        Ok(false)
+    match PROF_CREDENTIALS.get(&username) {
+        Some(hash) => {
+            if verify_password(password.as_str(), hash.as_str()) {
+                session.replace(Session::new(username, true));
+                return Ok(true);
+            }
+        }
+        None => {}
     }
+    match STUDENT_CREDENTIALS.get(&username) {
+        Some(hash) => {
+            if verify_password(password.as_str(), hash.as_str()) {
+                session.replace(Session::new(username, false));
+                return Ok(true);
+            }
+        }
+        None => {}
+    }
+    return Ok(false);
 }
 
 fn sanitize_name(name: String) -> String {
@@ -281,6 +301,28 @@ fn get_password(message: &str) -> std::io::Result<String> {
         }
     };
 }
+
+fn hash_password(password: &str) -> String {
+    let salt = SaltString::generate(&mut OsRng);
+
+    let argon2 = Argon2::default();
+
+    let hashed_password = argon2.hash_password(password.as_bytes(), &salt);
+
+    return hashed_password.unwrap().to_string();
+}
+
+fn verify_password(password: &str, hash: &str) -> bool {
+    let parsed_hash = PasswordHash::new(&hash).unwrap();
+    match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
+        Ok(_) => true,
+        Err(e) => {
+            error!("{}", e);
+            false
+        }
+    }
+}
+
 fn main() {
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -299,7 +341,6 @@ fn main() {
                 .unwrap(),
         ),
     ]).unwrap();
-
     info!("{} : Program started", Local::now().format("%Y-%m-%dT%H:%M:%S"));
     welcome();
     loop {

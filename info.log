@@ -1,2 +1,30 @@
 16:10:42 [INFO] 2023-01-28T17:10:42 : Program started
 16:11:25 [INFO] 2023-01-28T17:11:25 : danono accessed the grades of daniel
+16:23:00 [INFO] 2023-01-28T17:23:00 : Program started
+16:36:44 [INFO] 2023-01-28T17:36:44 : Program started
+16:37:12 [INFO] 2023-01-28T17:37:12 : Program started
+16:43:56 [INFO] 2023-01-28T17:43:56 : Program started
+16:45:03 [INFO] 2023-01-28T17:45:03 : Program started
+16:46:00 [INFO] 2023-01-28T17:46:00 : Program started
+16:47:40 [INFO] 2023-01-28T17:47:40 : Program started
+17:08:40 [INFO] 2023-01-28T18:08:40 : Program started
+17:26:40 [INFO] 2023-01-28T18:26:40 : Program started
+17:28:19 [INFO] 2023-01-28T18:28:19 : Program started
+17:28:45 [INFO] 2023-01-28T18:28:45 : Program started
+17:28:50 [INFO] $argon2id$v=19$m=4096,t=3,p=1$uMwmiAczRz4s73WvdWxiZA$NYVOPMT2n+CvAPcSpP+j0dVxkqqba78Eqr0bYS2PDDg
+17:32:41 [INFO] 2023-01-28T18:32:41 : Program started
+17:32:50 [INFO] $argon2id$v=19$m=4096,t=3,p=1$8zhUI0lhBQBp2ZxGLACjGQ$MbBMGqUZ8FfKA0qXDhk3vA4UzdDD1VCzdiIV+w+0bkY
+17:40:55 [INFO] 2023-01-28T18:40:55 : Program started
+17:41:57 [INFO] $argon2id$v=19$m=4096,t=3,p=1$34hB6lDPPq1Toq8wnWJ6kg$mKv2nTGNkweVppXkZVY5+BvYt+nrkMX8GdKNEyc27Hs
+17:41:57 [ERROR] invalid password
+17:42:32 [INFO] $argon2id$v=19$m=4096,t=3,p=1$34hB6lDPPq1Toq8wnWJ6kg$mKv2nTGNkweVppXkZVY5+BvYt+nrkMX8GdKNEyc27Hs
+17:42:32 [ERROR] invalid password
+17:46:51 [INFO] 2023-01-28T18:46:51 : Program started
+17:47:14 [INFO] $argon2id$v=19$m=4096,t=3,p=1$kLu8/oKsbDJYDMKBDgZXzA$2loYQt8tGA6MHYGZV/44KZXz4k189+zHUKKeIlU4rd0
+17:47:14 [ERROR] invalid password
+17:47:56 [INFO] 2023-01-28T18:47:56 : Program started
+17:48:04 [INFO] $argon2id$v=19$m=4096,t=3,p=1$AKgeDrnGK9sj/lBC6Dtj/g$r/cyjgioagYc30z7bUCUtVo4dA5kQZQa/10KR+c20zs
+17:48:14 [INFO] 2023-01-28T18:48:14 : danono entered the grade 1 for Bob
+18:13:54 [INFO] 2023-01-28T19:13:54 : Program started
+18:14:59 [INFO] 2023-01-28T19:14:59 : danono entered the grade 6 for daniel
+18:15:13 [INFO] 2023-01-28T19:15:13 : daniel accessed the grades of daniel
