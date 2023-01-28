@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, stdin, stdout, Write};
 use std::path::Path;
 use std::sync::Mutex;
+use sanitizer::StringSanitizer;
 
 const DATABASE_FILE: &str = "db.txt";
 const MAXIMUM_PASSWORD_LENGTH: usize = 32;
@@ -142,8 +143,11 @@ fn quit() {
 }
 
 fn login() -> std::io::Result<bool> {
+
     let username = match get_name("Enter your username: ") {
-        Ok(username) => username,
+        Ok(username) => {
+            username
+        },
         Err(e) => {
             return Err(e);
         }
@@ -162,18 +166,42 @@ fn login() -> std::io::Result<bool> {
     }
 }
 
+fn sanitize_name(name: String) -> String {
+    let mut sanitize = StringSanitizer::from(name);
+    sanitize.trim().alphanumeric().to_lowercase().clamp_max(MAXIMUM_USERNAME_LENGTH).get()
+}
+
+fn sanitize_password(password: String) -> String {
+    let mut sanitize = StringSanitizer::from(password);
+    sanitize.trim().clamp_max(MAXIMUM_PASSWORD_LENGTH).get()
+}
+
 fn get_name(message: &str) -> std::io::Result<String> {
-    return input()
+    return match input()
         .msg(message)
         .add_test(|x : &String| x.len() <= MAXIMUM_USERNAME_LENGTH)
-        .try_get();
+        .try_get(){
+        Ok(name) => {
+            Ok(sanitize_name(name))
+        },
+        Err(e) => {
+            Err(e)
+        }
+    };
 }
 
 fn get_password(message: &str) -> std::io::Result<String> {
-    return input()
+    return match input()
         .msg(message)
-        .add_test(|x: &String| x.len() <= MAXIMUM_PASSWORD_LENGTH)
-        .try_get();
+        .add_test(|x : &String| x.len() <= MAXIMUM_PASSWORD_LENGTH)
+        .try_get(){
+        Ok(password) => {
+            Ok(sanitize_password(password))
+        },
+        Err(e) => {
+            Err(e)
+        }
+    };
 }
 fn main() {
     TermLogger::init(
