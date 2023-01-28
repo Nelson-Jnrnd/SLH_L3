@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, stdin, stdout, Write};
+use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
 use sanitizer::StringSanitizer;
@@ -14,6 +15,17 @@ const DATABASE_FILE: &str = "db.txt";
 const MAXIMUM_PASSWORD_LENGTH: usize = 32;
 const MAXIMUM_USERNAME_LENGTH: usize = 128;
 const MINIMUM_USERNAME_LENGTH: usize = 1;
+
+// Session data
+struct Session {
+    username: String,
+    is_teacher: bool,
+}
+impl Session {
+    fn new(username: String, is_teacher: bool) -> Self {
+        Self { username, is_teacher }
+    }
+}
 
 lazy_static! {
     static ref GRADE_DATABASE: Mutex<HashMap<String, Vec<f32>>> = {
@@ -26,6 +38,13 @@ lazy_static! {
         set.insert(("duc".to_string(), "l4crypt0C3stR1g0l0".to_string()));
         set
     };
+    static ref STUDENT_CREDENTIALS: HashSet<(String, String)> = {
+        let mut set = HashSet::new();
+        set.insert(("daniel".to_string(), "3lves4ndH0b1ts".to_string()));
+        set.insert(("daniel2".to_string(), "3lves4ndH0b1ts".to_string()));
+        set
+    };
+    static ref SESSION: Mutex<Option<Session>> = Mutex::new(None);
 }
 
 fn read_database_from_file<P: AsRef<Path>>(
@@ -37,35 +56,59 @@ fn read_database_from_file<P: AsRef<Path>>(
     Ok(map)
 }
 
+fn require_login(session: &mut Option<Session>) {
+    println!("Login to continue");
+    while login(session).unwrap_or(false) == false {
+        println!("Wrong credentials");
+    }
+}
+
+fn logout(session: &mut Option<Session>) {
+    println!("You are now logged out");
+    *session = None;
+}
+
 fn welcome() {
     println!("Welcome to KING: KING Is Not GAPS");
 }
 
-fn menu(teacher: &mut bool) {
-    if *teacher {
-        teacher_action();
-    } else {
-        student_action(teacher);
+fn menu() {
+    println!("*****\n");
+    let mut binding = SESSION.lock().unwrap();
+    let session_data = binding.deref_mut();
+    match session_data {
+        Some(session) => {
+            if session.is_teacher {
+                teacher_action(session_data);
+            } else {
+                student_action(session_data);
+            }
+        }
+        None => {
+            println!("You are not logged in");
+            require_login(session_data);
+        },
     }
 }
 
-fn student_action(teacher: &mut bool) {
-    println!("*****\n1: See your grades\n2: Teachers' menu\n3: About\n0: Quit");
+fn student_action(session: &mut Option<Session>) {
+    println!("*****\n1: See your grades\n2: Logout\n0: Quit");
     let choice = input().inside(0..=2).msg("Enter Your choice: ").get();
     match choice {
         1 => show_grades("Enter your name. Do NOT lie!"),
-        2 => become_teacher(teacher),
+        2 => logout(session),
         0 => quit(),
         _ => panic!("impossible choice"),
     }
 }
 
-fn teacher_action() {
-    println!("*****\n1: See grades of student\n2: Enter grades\n3 About\n0: Quit");
-    let choice = input().inside(0..=2).msg("Enter Your choice: ").get();
+fn teacher_action(session: &mut Option<Session>) {
+    println!("*****\n1: See grades of student\n2: Enter grades\n3 Logout\n0: Quit");
+    let choice = input().inside(0..=3).msg("Enter Your choice: ").get();
     match choice {
         1 => show_grades("Enter the name of the user of which you want to see the grades:"),
         2 => enter_grade(),
+        3 => logout(session),
         0 => quit(),
         _ => panic!("impossible choice"),
     }
@@ -86,23 +129,6 @@ fn show_grades(message: &str) {
         }
         None => panic!("User not in system"),
     };
-}
-
-fn become_teacher(teacher: &mut bool) {
-    match login() {
-        Ok(result) => {
-            if result {
-                *teacher = true;
-                return;
-            } else {
-                println!("Wrong credentials");
-            }
-        }
-        Err(_) => {
-            println!("Failed login")
-        },
-    }
-    *teacher = false;
 }
 
 fn enter_grade() {
@@ -142,7 +168,7 @@ fn quit() {
     std::process::exit(0);
 }
 
-fn login() -> std::io::Result<bool> {
+fn login(session: &mut Option<Session>) -> std::io::Result<bool> {
 
     let username = match get_name("Enter your username: ") {
         Ok(username) => {
@@ -160,6 +186,10 @@ fn login() -> std::io::Result<bool> {
     };
 
     if PROF_CREDENTIALS.contains(&(username.clone(), password.clone())) {
+        session.replace(Session::new(username, true));
+        Ok(true)
+    } else if STUDENT_CREDENTIALS.contains(&(username.clone(), password.clone())) {
+        session.replace(Session::new(username, false));
         Ok(true)
     } else {
         Ok(false)
@@ -214,8 +244,7 @@ fn main() {
     )
     .unwrap();
     welcome();
-    let mut teacher = false;
     loop {
-        menu(&mut teacher);
+        menu();
     }
 }
