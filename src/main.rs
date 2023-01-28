@@ -5,7 +5,7 @@ use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, stdin, stdout, Write};
 use std::path::Path;
 use std::sync::Mutex;
 
@@ -92,20 +92,37 @@ fn become_teacher(teacher: &mut bool) {
         Ok(result) => {
             if result {
                 *teacher = true;
+                return;
             } else {
-                *teacher = false;
                 println!("Wrong credentials");
             }
         }
-        Err(_) => println!("Failed login"),
+        Err(_) => {
+            println!("Failed login")
+        },
     }
+    *teacher = false;
 }
 
 fn enter_grade() {
     println!("What is the name of the student?");
-    let name: String = input().add_test(|x: &String| !x.is_empty()).get();
+    let name: String = input()
+        .add_test(|x: &String| !x.is_empty() && x.len() <= MAXIMUM_USERNAME_LENGTH).get();
     println!("What is the new grade of the student?");
-    let grade: f32 = input().add_test(|x| *x >= 0.0 && *x <= 6.0).get();
+    let grade: f32 = match input()
+        .add_test(|x: &String| x.parse::<f32>().is_ok())
+        .add_test(|x: &String| {
+            let grade: f32 = x.parse().unwrap();
+            grade.trunc() >= 0.0 && grade.trunc() <= 6.0 && (grade * 10.0).fract() == 0.0
+            && !(grade.trunc() == 6.0 && grade.fract() != 0.0)
+        })
+        .try_get() {
+        Ok(grade) => {
+            let grade: f32 = grade.parse().unwrap();
+            grade
+        }
+        Err(_) => panic!("Invalid grade"),
+    };
     let mut map = GRADE_DATABASE.lock().unwrap();
     match map.get_mut(&name) {
         Some(v) => v.push(grade),
@@ -114,6 +131,7 @@ fn enter_grade() {
         }
     };
 }
+
 
 fn quit() {
     println!("Saving database!");
